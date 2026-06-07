@@ -1,4 +1,4 @@
-module github.com/openweft/hclconfig
+module github.com/openweft/weft-hcl
 
 go 1.25.0
 

@@ -1,4 +1,4 @@
-package hclconfig
+package wefthcl
 
 import (
 	"bytes"
@@ -397,7 +397,7 @@ func TestExpandHomePath(t *testing.T) {
 
 func TestResolveConfig(t *testing.T) {
 	t.Run("emptyPathUsesDefault", func(t *testing.T) {
-		// default ".mock/hcl" should not exist => error
+		// default "state/hcl" should not exist => error
 		if _, _, err := resolveConfig(""); err == nil {
 			t.Error("expected error for missing default path")
 		}
@@ -519,7 +519,7 @@ keypair noattr { }`)
 		}
 	})
 	t.Run("emptyPath", func(t *testing.T) {
-		// default ".mock/hcl" -> nil
+		// default "state/hcl" -> nil
 		if got := LoadKeypairs(""); got != nil {
 			t.Errorf("expected nil, got %v", got)
 		}
@@ -1000,7 +1000,7 @@ mock "bad" {
 		_ = mb // result may be empty; the value of this test is the path coverage
 	})
 	t.Run("emptyPath", func(t *testing.T) {
-		// default ".mock/hcl" missing -> empty MockBlock
+		// default "state/hcl" missing -> empty MockBlock
 		mb := LoadMockBlock("")
 		if mb.ID != "" {
 			t.Errorf("expected empty, got %+v", mb)
@@ -1296,7 +1296,7 @@ func TestBuildRowsFromConfigError(t *testing.T) {
 }
 
 func TestBuildRowsFromConfigEmptyPathDefault(t *testing.T) {
-	// empty path -> default .mock/hcl -> error
+	// empty path -> default state/hcl -> error
 	if _, err := BuildRowsFromConfig("", "", nil, nil); err == nil {
 		t.Error("expected error")
 	}
@@ -1895,7 +1895,7 @@ func TestReadIntAttrFloatFallback(t *testing.T) {
 }
 
 func TestParseVMsEmptyPath(t *testing.T) {
-	// empty path -> default ".mock/hcl" which doesn't exist
+	// empty path -> default "state/hcl" which doesn't exist
 	if _, _, _, err := ParseVMs(""); err == nil {
 		t.Error("expected error")
 	}

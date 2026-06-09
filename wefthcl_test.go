@@ -345,12 +345,12 @@ func TestValidateVMDefs(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// parseMockHeader
+// parseWeftHeader
 // ---------------------------------------------------------------------------
 
-func TestParseMockHeader(t *testing.T) {
+func TestParseWeftHeader(t *testing.T) {
 	t.Run("labeled", func(t *testing.T) {
-		ak, mid, err := parseMockHeader(`mock "id1" { authorized_keys_path = "/keys" }`)
+		ak, mid, err := parseWeftHeader(`weft "id1" { authorized_keys_path = "/keys" }`)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -359,7 +359,7 @@ func TestParseMockHeader(t *testing.T) {
 		}
 	})
 	t.Run("unquoted_label", func(t *testing.T) {
-		ak, mid, err := parseMockHeader(`mock fooBar { authorized-keys-path = "/k" }`)
+		ak, mid, err := parseWeftHeader(`weft fooBar { authorized-keys-path = "/k" }`)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -368,7 +368,7 @@ func TestParseMockHeader(t *testing.T) {
 		}
 	})
 	t.Run("missing", func(t *testing.T) {
-		if _, _, err := parseMockHeader(`no mock here`); err == nil {
+		if _, _, err := parseWeftHeader(`no weft here`); err == nil {
 			t.Error("expected error")
 		}
 	})
@@ -425,7 +425,7 @@ func TestResolveConfig(t *testing.T) {
 		}
 	})
 	t.Run("ok", func(t *testing.T) {
-		dir := writeTempConfig(t, "a.hcl", "version = \"1\"\nmock \"x\" {}\n")
+		dir := writeTempConfig(t, "a.hcl", "version = \"1\"\nweft \"x\" {}\n")
 		data, label, err := resolveConfig(dir)
 		if err != nil {
 			t.Fatal(err)
@@ -433,8 +433,8 @@ func TestResolveConfig(t *testing.T) {
 		if label != dir {
 			t.Errorf("label %q != dir %q", label, dir)
 		}
-		if !strings.Contains(string(data), "mock") {
-			t.Errorf("missing mock in result")
+		if !strings.Contains(string(data), "weft") {
+			t.Errorf("missing weft in result")
 		}
 	})
 }
@@ -447,7 +447,7 @@ func TestReadAndValidateHCLFile(t *testing.T) {
 	})
 	t.Run("noVersion", func(t *testing.T) {
 		p := filepath.Join(t.TempDir(), "a.hcl")
-		os.WriteFile(p, []byte("mock x {}"), 0o600)
+		os.WriteFile(p, []byte("weft x {}"), 0o600)
 		if _, err := readAndValidateHCLFile(p); err == nil {
 			t.Error("expected error")
 		}
@@ -463,7 +463,7 @@ func TestReadAndValidateHCLFile(t *testing.T) {
 		// the function normalizes curly quotes
 		p := filepath.Join(t.TempDir(), "a.hcl")
 		// Smart quotes around "1"
-		content := "version = \xe2\x80\x9c1\xe2\x80\x9d\nmock \xe2\x80\x98x\xe2\x80\x99 {}\n"
+		content := "version = \xe2\x80\x9c1\xe2\x80\x9d\nweft \xe2\x80\x98x\xe2\x80\x99 {}\n"
 		if err := os.WriteFile(p, []byte(content), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -471,20 +471,20 @@ func TestReadAndValidateHCLFile(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(string(data), "mock") {
-			t.Error("expected mock present")
+		if !strings.Contains(string(data), "weft") {
+			t.Error("expected weft present")
 		}
 	})
 }
 
 func TestReadConfig(t *testing.T) {
-	dir := writeTempConfig(t, "x.hcl", `version = "1"`+"\nmock \"x\" {}\n")
+	dir := writeTempConfig(t, "x.hcl", `version = "1"`+"\nweft \"x\" {}\n")
 	data, err := ReadConfig(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(data), "mock") {
-		t.Error("missing mock")
+	if !strings.Contains(string(data), "weft") {
+		t.Error("missing weft")
 	}
 	// ReadConfig with empty path -> default path missing -> error.
 	if _, err := ReadConfig("/nope/nope"); err == nil {
@@ -896,13 +896,13 @@ not = "x"`)
 }
 
 // ---------------------------------------------------------------------------
-// LoadMockBlock (HCL path + regex fallback)
+// LoadWeftBlock (HCL path + regex fallback)
 // ---------------------------------------------------------------------------
 
-func TestLoadMockBlock(t *testing.T) {
+func TestLoadWeftBlock(t *testing.T) {
 	t.Run("hcl", func(t *testing.T) {
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
-mock "fromhcl" {
+weft "fromhcl" {
   authorized_keys_path = "~/auth"
   parallelism          = 3
   adapter              = adapter.VZ
@@ -914,9 +914,9 @@ mock "fromhcl" {
   }
 }
 `)
-		mb := LoadMockBlock(dir)
+		mb := LoadWeftBlock(dir)
 		if mb.AuthorizedKeysPath == "" || mb.Parallelism != 3 || mb.Adapter == "" {
-			t.Errorf("mock block: %+v", mb)
+			t.Errorf("weft block: %+v", mb)
 		}
 		if mb.CachePath != "/c" || mb.VMsPath != "/v" || mb.SSHUser != "u" {
 			t.Errorf("nested attrs: %+v", mb)
@@ -925,11 +925,11 @@ mock "fromhcl" {
 			t.Errorf("ssh key path: %+v", mb)
 		}
 	})
-	// Directly exercise the HasPrefix("keypair.") branch in parseMockBlockHCL by
+	// Directly exercise the HasPrefix("keypair.") branch in parseWeftBlockHCL by
 	// crafting an HCL body whose `keypair` value is the literal string
 	// "keypair.alpha" and whose evalCtx contains a keypair entry.
 	t.Run("hclKeypairTraversal", func(t *testing.T) {
-		src := []byte(`mock "x" {
+		src := []byte(`weft "x" {
   ssh {
     keypair = "keypair.alpha"
   }
@@ -940,11 +940,11 @@ mock "fromhcl" {
 				"alpha": cty.ObjectVal(map[string]cty.Value{"file_path": cty.StringVal("/resolved")}),
 			}),
 		}}
-		// find the mock block
+		// find the weft block
 		hb := f.Body.(*hclsyntax.Body)
 		for _, b := range hb.Blocks {
-			if b.Type == "mock" {
-				mb := parseMockBlockHCL(b.Body, evalCtx)
+			if b.Type == "weft" {
+				mb := parseWeftBlockHCL(b.Body, evalCtx)
 				if mb.SSHKeyPath != "/resolved" {
 					t.Errorf("expected /resolved, got %+v", mb)
 				}
@@ -953,24 +953,24 @@ mock "fromhcl" {
 	})
 	t.Run("hclKeypairLiteral", func(t *testing.T) {
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
-mock "x" {
+weft "x" {
   ssh {
     user    = "ec2-user"
     keypair = "~/keys/private"
   }
 }
 `)
-		mb := LoadMockBlock(dir)
+		mb := LoadWeftBlock(dir)
 		if !strings.HasSuffix(mb.SSHKeyPath, "/keys/private") {
 			t.Errorf("literal keypair: %q", mb.SSHKeyPath)
 		}
 	})
 	t.Run("regex", func(t *testing.T) {
-		// Call parseMockBlockRegex directly to exercise the regex code path
+		// Call parseWeftBlockRegex directly to exercise the regex code path
 		// without relying on HCL parse failures.
 		s := `endpoint with-dashes { url = "x" }
 keypair alpha { file_path = "/k/alpha" }
-mock "fb-id" {
+weft "fb-id" {
   authorized_keys_path = "~/auth"
   parallelism          = 9
   adapter              = adapter.TART
@@ -982,26 +982,26 @@ mock "fb-id" {
   }
 }
 `
-		mb := parseMockBlockRegex(s)
+		mb := parseWeftBlockRegex(s)
 		if mb.ID != "fb-id" || mb.Parallelism != 9 || mb.SSHKeyPath != "/k/alpha" {
-			t.Errorf("regex mock: %+v", mb)
+			t.Errorf("regex weft: %+v", mb)
 		}
 	})
-	t.Run("regexFromLoadMockBlock", func(t *testing.T) {
+	t.Run("regexFromLoadWeftBlock", func(t *testing.T) {
 		// Force HCL parse failure with intentionally broken syntax so that
-		// LoadMockBlock takes the parseMockBlockRegex fallback path.
+		// LoadWeftBlock takes the parseWeftBlockRegex fallback path.
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
 broken syntax {{ here
-mock "bad" {
+weft "bad" {
   authorized_keys_path = "~/auth"
 }
 `)
-		mb := LoadMockBlock(dir)
+		mb := LoadWeftBlock(dir)
 		_ = mb // result may be empty; the value of this test is the path coverage
 	})
 	t.Run("emptyPath", func(t *testing.T) {
-		// default "state/hcl" missing -> empty MockBlock
-		mb := LoadMockBlock("")
+		// default "state/hcl" missing -> empty WeftBlock
+		mb := LoadWeftBlock("")
 		if mb.ID != "" {
 			t.Errorf("expected empty, got %+v", mb)
 		}
@@ -1009,24 +1009,24 @@ mock "bad" {
 	t.Run("regexLiteralKeypair", func(t *testing.T) {
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
 endpoint with-dashes { url = "x" }
-mock "fb-id" {
+weft "fb-id" {
   ssh {
     user    = "ec2"
     keypair = "/abs/keypath"
   }
 }
 `)
-		mb := LoadMockBlock(dir)
+		mb := LoadWeftBlock(dir)
 		if mb.SSHKeyPath != "/abs/keypath" {
 			t.Errorf("expected literal keypair, got %q", mb.SSHKeyPath)
 		}
 	})
-	t.Run("regexNoMockBlock", func(t *testing.T) {
-		// triggers parseMockBlockRegex returning empty
+	t.Run("regexNoWeftBlock", func(t *testing.T) {
+		// triggers parseWeftBlockRegex returning empty
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
 endpoint with-dashes { url = "x" }
 `)
-		mb := LoadMockBlock(dir)
+		mb := LoadWeftBlock(dir)
 		if mb.ID != "" {
 			t.Errorf("expected empty mb, got %+v", mb)
 		}
@@ -1071,7 +1071,7 @@ endpoint with-dashes { url = "x" }
 func TestLoadTimeoutConfig(t *testing.T) {
 	t.Run("hcl", func(t *testing.T) {
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
-mock "x" {
+weft "x" {
   timeout {
     pull_post_completion = "30s"
     wait_ssh             = 120
@@ -1087,7 +1087,7 @@ mock "x" {
 	t.Run("regexFallback", func(t *testing.T) {
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
 endpoint with-dashes { url = "x" }
-mock "x" {
+weft "x" {
   timeout {
     pull_post_completion = "10s"
     wait_ssh             = "2m"
@@ -1105,7 +1105,7 @@ mock "x" {
 			t.Errorf("expected empty: %+v", got)
 		}
 	})
-	t.Run("regexNoMock", func(t *testing.T) {
+	t.Run("regexNoWeft", func(t *testing.T) {
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
 endpoint with-dashes { url = "x" }
 `)
@@ -1117,7 +1117,7 @@ endpoint with-dashes { url = "x" }
 	t.Run("regexNoTimeout", func(t *testing.T) {
 		dir := writeTempConfig(t, "a.hcl", `version = "1"
 endpoint with-dashes { url = "x" }
-mock "x" {
+weft "x" {
   ssh { user = "u" }
 }
 `)
@@ -1127,35 +1127,35 @@ mock "x" {
 		}
 	})
 	t.Run("loadTimeoutConfigRegexEdges", func(t *testing.T) {
-		// no mock block
+		// no weft block
 		if got := loadTimeoutConfigRegex(""); got.WaitSSH != 0 {
 			t.Errorf("expected zero, got %+v", got)
 		}
-		// unbalanced mock block
-		if got := loadTimeoutConfigRegex(`mock "x" {`); got.WaitSSH != 0 {
+		// unbalanced weft block
+		if got := loadTimeoutConfigRegex(`weft "x" {`); got.WaitSSH != 0 {
 			t.Errorf("expected zero (unbalanced), got %+v", got)
 		}
 		// unbalanced timeout
-		if got := loadTimeoutConfigRegex(`mock "x" { timeout {`); got.WaitSSH != 0 {
+		if got := loadTimeoutConfigRegex(`weft "x" { timeout {`); got.WaitSSH != 0 {
 			t.Errorf("expected zero (unbalanced timeout), got %+v", got)
 		}
 		// integer in quotes (sscanf path)
-		got := loadTimeoutConfigRegex(`mock "x" { timeout { wait_ssh = "60" } }`)
+		got := loadTimeoutConfigRegex(`weft "x" { timeout { wait_ssh = "60" } }`)
 		if got.WaitSSH != 60 {
 			t.Errorf("expected 60, got %+v", got)
 		}
 		// invalid duration string still falls through
-		got = loadTimeoutConfigRegex(`mock "x" { timeout { wait_ssh = "abc" } }`)
+		got = loadTimeoutConfigRegex(`weft "x" { timeout { wait_ssh = "abc" } }`)
 		if got.WaitSSH != 0 {
 			t.Errorf("expected 0 for invalid, got %+v", got)
 		}
 		// unquoted integer triggers the bottom branch
-		got = loadTimeoutConfigRegex(`mock "x" { timeout { up = 300 } }`)
+		got = loadTimeoutConfigRegex(`weft "x" { timeout { up = 300 } }`)
 		if got.Up != 300 {
 			t.Errorf("expected up=300, got %+v", got)
 		}
 		// quoted duration string ("30s") triggers time.ParseDuration success
-		got = loadTimeoutConfigRegex(`mock "x" { timeout { pull_post_completion = "30s" } }`)
+		got = loadTimeoutConfigRegex(`weft "x" { timeout { pull_post_completion = "30s" } }`)
 		if got.PullPostCompletion != 30 {
 			t.Errorf("expected ppc=30, got %+v", got)
 		}
@@ -1202,7 +1202,7 @@ func TestParseVMsFull(t *testing.T) {
 	// the "web" vm has explicit ssh.user = deploy
 	var web *VMDef
 	for i := range vms {
-		if vms[i].Name == "mock-full-web" {
+		if vms[i].Name == "weft-full-web" {
 			web = &vms[i]
 		}
 	}
@@ -1242,8 +1242,8 @@ func TestParseVMsErrors(t *testing.T) {
 			t.Error("expected error")
 		}
 	})
-	t.Run("noMock", func(t *testing.T) {
-		_, _, _, err := ParseVMs("testdata/no_mock")
+	t.Run("noWeft", func(t *testing.T) {
+		_, _, _, err := ParseVMs("testdata/no_weft")
 		if err == nil {
 			t.Error("expected error")
 		}
@@ -1271,8 +1271,8 @@ func TestBuildRowsFromConfig(t *testing.T) {
 	if len(rows) == 0 {
 		t.Fatal("expected rows")
 	}
-	// row names should follow mock-<mid>-<...> pattern; mid="full" overrides prefix
-	if !strings.HasPrefix(rows[0].Name, "mock-full-") {
+	// row names should follow weft-<mid>-<...> pattern; mid="full" overrides prefix
+	if !strings.HasPrefix(rows[0].Name, "weft-full-") {
 		t.Errorf("name pattern: %q", rows[0].Name)
 	}
 	// at least one row has Distribution set from getDistributionFromImage
@@ -1314,10 +1314,10 @@ func TestReadVMs(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// enrichVMDefs corner cases (extra disk size inheritance, mock defaults)
+// enrichVMDefs corner cases (extra disk size inheritance, weft defaults)
 // ---------------------------------------------------------------------------
 
-func TestEnrichVMDefsMockDefaults(t *testing.T) {
+func TestEnrichVMDefsWeftDefaults(t *testing.T) {
 	dir, priv := stageKeypair(t, "minimal")
 	pub := priv + ".pub"
 	// Drop pub key briefly so the SSHPubKey path that reads pub fails — verify
@@ -1435,14 +1435,14 @@ func TestApplyOCIMap(t *testing.T) {
 	})
 	t.Run("tokenUnresolvedThenFallback", func(t *testing.T) {
 		// token cannot be resolved -> clears Image, then name-based fallback finds match
-		r := Row{Name: "mock-full-debian-1", Image: "img.unknown.from"}
+		r := Row{Name: "weft-full-debian-1", Image: "img.unknown.from"}
 		applyOCIMap(&r, map[string]string{"debian": "registry/debian:13"})
 		if r.Image != "registry/debian:13" {
 			t.Errorf("got %q", r.Image)
 		}
 	})
 	t.Run("noTokenNameMatch", func(t *testing.T) {
-		r := Row{Name: "mock-rocky-1"}
+		r := Row{Name: "weft-rocky-1"}
 		applyOCIMap(&r, map[string]string{"rocky": "registry/rocky:10"})
 		if r.Image != "registry/rocky:10" {
 			t.Errorf("got %q", r.Image)
@@ -1556,7 +1556,7 @@ func TestComputeGroupPrefix(t *testing.T) {
 		want string
 	}{
 		{nil, ""},
-		{[]VMDef{{Name: "mock-foo-a"}, {Name: "mock-foo-b"}}, "mock-foo"},
+		{[]VMDef{{Name: "weft-foo-a"}, {Name: "weft-foo-b"}}, "weft-foo"},
 		{[]VMDef{{Name: "x"}, {Name: "y"}}, ""},
 		{[]VMDef{{Name: "abc"}}, "abc"},
 		{[]VMDef{{Name: "a-b-c"}, {Name: "a-b"}}, "a-b"},
@@ -1570,13 +1570,13 @@ func TestComputeGroupPrefix(t *testing.T) {
 
 func TestBuildRowsFromVMDefs(t *testing.T) {
 	vms := []VMDef{
-		{Name: "mock-x-web", Count: 2, Disks: []DiskDef{{SizeGiB: 1, Image: "i1"}, {SizeGiB: 2, Label: "data", Mountpoint: "/d"}}},
+		{Name: "weft-x-web", Count: 2, Disks: []DiskDef{{SizeGiB: 1, Image: "i1"}, {SizeGiB: 2, Label: "data", Mountpoint: "/d"}}},
 	}
-	rows := buildRowsFromVMDefs(vms, "mock-x", "deploy1", "")
+	rows := buildRowsFromVMDefs(vms, "weft-x", "deploy1", "")
 	if len(rows) != 2 {
 		t.Fatalf("expected 2, got %d", len(rows))
 	}
-	if !strings.HasPrefix(rows[0].Name, "mock-deploy1-web-") {
+	if !strings.HasPrefix(rows[0].Name, "weft-deploy1-web-") {
 		t.Errorf("name: %q", rows[0].Name)
 	}
 	if len(rows[0].ExtraDisks) != 1 {
@@ -1584,13 +1584,13 @@ func TestBuildRowsFromVMDefs(t *testing.T) {
 	}
 
 	// Variant: mid overrides prefix
-	rows = buildRowsFromVMDefs(vms, "mock-x", "p", "M")
-	if !strings.HasPrefix(rows[0].Name, "mock-M-web-") {
+	rows = buildRowsFromVMDefs(vms, "weft-x", "p", "M")
+	if !strings.HasPrefix(rows[0].Name, "weft-M-web-") {
 		t.Errorf("mid override: %q", rows[0].Name)
 	}
 
-	// Variant: prefix "mock-<groupPrefix>-..."
-	vms2 := []VMDef{{Name: "mock-x-y", Count: 1, Disks: []DiskDef{{SizeGiB: 1}}}}
+	// Variant: prefix "weft-<groupPrefix>-..."
+	vms2 := []VMDef{{Name: "weft-x-y", Count: 1, Disks: []DiskDef{{SizeGiB: 1}}}}
 	rows = buildRowsFromVMDefs(vms2, "x", "p", "")
 	if rows[0].Name == "" {
 		t.Errorf("missing name")
@@ -1836,7 +1836,7 @@ broken {{ here
 func TestLoadTimeoutConfigHCLParseError(t *testing.T) {
 	dir := writeTempConfig(t, "a.hcl", `version = "1"
 broken {{ here
-mock "x" {
+weft "x" {
   timeout {
     up = 5
   }
@@ -1847,35 +1847,35 @@ mock "x" {
 	_ = tc
 }
 
-func TestParseMockBlockRegexEdge(t *testing.T) {
+func TestParseWeftBlockRegexEdge(t *testing.T) {
 	// unquoted label
-	mb := parseMockBlockRegex(`mock fooBar { authorized_keys_path = "/k" }`)
+	mb := parseWeftBlockRegex(`weft fooBar { authorized_keys_path = "/k" }`)
 	if mb.ID != "fooBar" {
 		t.Errorf("unquoted label: %+v", mb)
 	}
-	// unbalanced mock body
-	mb = parseMockBlockRegex(`mock "x" {`)
+	// unbalanced weft body
+	mb = parseWeftBlockRegex(`weft "x" {`)
 	if mb.ID != "" {
 		t.Errorf("expected empty on unbalanced: %+v", mb)
 	}
-	// no mock block at all
-	mb = parseMockBlockRegex(`no mock here`)
+	// no weft block at all
+	mb = parseWeftBlockRegex(`no weft here`)
 	if mb.ID != "" {
 		t.Errorf("expected empty: %+v", mb)
 	}
 }
 
-func TestParseMockBlockHCLHyphenAuthKeys(t *testing.T) {
+func TestParseWeftBlockHCLHyphenAuthKeys(t *testing.T) {
 	// Body that uses authorized-keys-path (hyphenated form) — exercises the
-	// fallback inside parseMockBlockHCL when underscored form is absent.
-	src := []byte(`mock "x" {
+	// fallback inside parseWeftBlockHCL when underscored form is absent.
+	src := []byte(`weft "x" {
   authorized-keys-path = "~/akp"
 }`)
 	f, _ := hclsyntax.ParseConfig(src, "x.hcl", hcl.InitialPos)
 	hb := f.Body.(*hclsyntax.Body)
 	for _, b := range hb.Blocks {
-		if b.Type == "mock" {
-			mb := parseMockBlockHCL(b.Body, &hcl.EvalContext{Variables: map[string]cty.Value{}})
+		if b.Type == "weft" {
+			mb := parseWeftBlockHCL(b.Body, &hcl.EvalContext{Variables: map[string]cty.Value{}})
 			if mb.AuthorizedKeysPath != "~/akp" {
 				t.Errorf("expected ~/akp, got %+v", mb)
 			}
@@ -1903,7 +1903,7 @@ func TestParseVMsEmptyPath(t *testing.T) {
 
 func TestParseVMsValidationError(t *testing.T) {
 	dir := writeTempConfig(t, "a.hcl", `version = "1"
-mock "x" {}
+weft "x" {}
 vms web {
   count = 1
   // missing cpu, memory, ssh, etc.
@@ -1915,7 +1915,7 @@ vms web {
 }
 
 func TestParseVMDefsTokenFrom(t *testing.T) {
-	// Unquoted token ref in `from = ...` (mock.go:393-395)
+	// Unquoted token ref in `from = ...` (vmdef.go:393-395)
 	src := `vms x {
   count = 1
   disk {
@@ -1952,7 +1952,7 @@ func TestEnrichVMDefsBootDiskSizeFromBody(t *testing.T) {
 	if len(out) == 0 {
 		t.Fatal("no vms parsed")
 	}
-	enrichVMDefs(out, src, map[string]string{}, MockBlock{})
+	enrichVMDefs(out, src, map[string]string{}, WeftBlock{})
 	if out[0].Disks[0].SizeGiB != 8 {
 		t.Errorf("expected 8 GiB, got %d", out[0].Disks[0].SizeGiB)
 	}

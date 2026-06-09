@@ -1,6 +1,6 @@
 version = "1"
 
-mock “smartquotes” {
+weft “smartquotes” {
   ssh {
     user    = “root”
     keypair = keypair.smart

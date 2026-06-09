@@ -1,2 +1,2 @@
 // missing version attribute
-mock "x" {}
+weft "x" {}

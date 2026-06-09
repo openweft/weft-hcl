@@ -1,3 +1,3 @@
 version = "99"
 
-mock "x" {}
+weft "x" {}

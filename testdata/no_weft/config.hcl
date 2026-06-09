@@ -1,6 +1,6 @@
 version = "1"
 
-// no mock block here
+// no weft block here
 vms x {
   cpu = 1
 }

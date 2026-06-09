@@ -4,17 +4,17 @@ version = "1"
 var registry = "ghcr.io/openweft"
 var team     = "platform"
 
-mock "full" {
+weft "full" {
   authorized_keys_path = "~/.ssh/authorized_keys"
   parallelism          = 4
   adapter              = adapter.TART
 
   cache {
-    path = "/var/cache/mock"
+    path = "/var/cache/weft"
   }
 
   vms {
-    path = "/var/lib/mock/vms"
+    path = "/var/lib/weft/vms"
   }
 
   ssh {
@@ -38,7 +38,7 @@ keypair "with-hyphen" {
 }
 
 log {
-  file            = "/var/log/mock.log"
+  file            = "/var/log/weft.log"
   level           = "info"
   max_mb          = 100
   timeout_seconds = 60

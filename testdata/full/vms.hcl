@@ -1,6 +1,6 @@
 version = "1"
 
-vms mock-full-web {
+vms weft-full-web {
   count  = 2
   cpu    = 4
   mem    = 2048
@@ -30,7 +30,7 @@ vms mock-full-web {
   }
 }
 
-vms mock-full-app {
+vms weft-full-app {
   count  = 1
   cpu    = 2
   memory = 1024
@@ -43,11 +43,11 @@ echo raw
 RAW_SCRIPT
 }
 
-vms mock-full-disabled {
+vms weft-full-disabled {
   count = 0
 }
 
-vms mock-full-keepath {
+vms weft-full-keepath {
   count  = 1
   cpu    = 1
   memory = 512

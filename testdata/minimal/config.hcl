@@ -1,6 +1,6 @@
 version = "1"
 
-mock "minimal" {
+weft "minimal" {
   ssh {
     user    = "ubuntu"
     keypair = "KEYPATH_PLACEHOLDER"

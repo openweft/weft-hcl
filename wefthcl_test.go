@@ -74,9 +74,9 @@ func stageKeypair(t *testing.T, fixture string) (string, string) {
 
 func TestParseSizeGiB(t *testing.T) {
 	cases := []struct {
-		in       string
-		want     int
-		wantOK   bool
+		in     string
+		want   int
+		wantOK bool
 	}{
 		{`"20Gi"`, 20, true},
 		{`"20G"`, 20, true},
@@ -797,7 +797,7 @@ func TestResolveJoinElement(t *testing.T) {
 		{`var.missing`, "", false},
 		{`endpoint.r.url`, "REG", true},
 		{`endpoint.unknown.url`, "", true}, // hits fallback "strip" path
-		{`arch.gnu`, "", true},              // value depends on host, just check ok
+		{`arch.gnu`, "", true},             // value depends on host, just check ok
 		{`arch.bad`, "", false},
 		{`bare`, "bare", true},
 	}
